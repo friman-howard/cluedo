@@ -162,6 +162,7 @@
   .contract .row:last-child { border-bottom: 0; }
   .contract .label { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: #7a3a2a; }
   .contract .value { font-size: 28px; color: #1c120e; line-height: 1.2; }
+  .contract .value .sub { display: block; font-size: 17px; font-style: italic; color: #5c4636; margin-top: 2px; }
   .hint { color: #7d6d5c; font-size: 14px; font-style: italic; margin: 12px 0 0; }
 
   .error {
@@ -257,16 +258,16 @@ const PLACES = [
   "The Driveway",
 ];
 const OBJECTS = [
-  "The Duck of Death",
-  "The Assault Shaker",
-  "The Pan of Pain",
-  "The Bowl of Doom",
-  "The Powder Keg",
-  "The Deadly Decanter",
-  "The Whisk of Death",
-  "The Grim Peeler",
-  "The Corkscrew of Sorrow",
-  "The Candlestick Maker's Revenge",
+  "The Duck of Death (porcelain duck)",
+  "The Assault Shaker (salt shaker)",
+  "The Pan of Pain (frying pan)",
+  "The Bowl of Doom (dog bowl)",
+  "The Powder Keg (baking powder)",
+  "The Deadly Decanter (decanter)",
+  "The Whisk of Death (whisk)",
+  "The Grim Peeler (potato peeler)",
+  "The Corkscrew of Sorrow (corkscrew)",
+  "The Piranha's Bite (piranha heat rack)",
 ];
 // Change the seed to deal a completely new game.
 const SEED = "Test again";
@@ -416,14 +417,28 @@ function openReveal() {
   const c = contracts[current];
   $("revealName").textContent = current;
   // Filled now but hidden by CSS until the card is held.
-  $("vVictim").textContent = c.victim;
-  $("vPlace").textContent = c.place;
-  $("vObject").textContent = c.object;
+  setValue("vVictim", c.victim);
+  setValue("vPlace", c.place);
+  setValue("vObject", c.object);
   hasRevealed = false;
   $("doneBtn").disabled = true;
   $("revealBack").hidden = false;
   hide();
   openOverlay("revealOverlay");
+}
+
+// "The Pan of Pain (frying pan)" -> title, with the bracketed part as a smaller line.
+function setValue(id, text) {
+  const el = $(id);
+  el.textContent = "";
+  const m = /^(.*\S)\s*\(([^()]*)\)\s*$/.exec(text);
+  el.appendChild(document.createTextNode(m ? m[1] : text));
+  if (m) {
+    const sub = document.createElement("span");
+    sub.className = "sub";
+    sub.textContent = m[2];
+    el.appendChild(sub);
+  }
 }
 
 function closeReveal() {
