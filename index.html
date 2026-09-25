@@ -76,6 +76,9 @@
   }
   .tile:active:not(:disabled) { transform: translateY(1px); border-color: var(--brass); }
   .tile:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .tile .name { display: flex; flex-direction: column; min-width: 0; }
+  .tile .role { font-size: 15px; font-style: italic; color: var(--ink-dim); margin-top: 2px; }
+  .tile:disabled .role { color: #5a4d41; }
   .tile .mark { font-size: 14px; color: var(--brass-dim); font-style: italic; white-space: nowrap; }
   .tile:disabled {
     cursor: default;
@@ -120,6 +123,7 @@
   }
   .sheet h2 { margin: 0 0 8px; font-weight: normal; font-size: 30px; font-variant: small-caps; letter-spacing: .05em; }
   .sheet p { color: var(--ink-dim); margin: 0 0 22px; font-size: 18px; line-height: 1.4; }
+  .sheet .role { display: block; font-size: 18px; font-style: italic; color: var(--brass); font-variant: normal; letter-spacing: 0; margin-top: 4px; }
   .sheet .eyes { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--blood-hi); margin-bottom: 20px; }
 
   .btn {
@@ -194,7 +198,7 @@
 <div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="sheet">
     <div class="eyes">Everyone else, look away</div>
-    <h2 id="confirmTitle">Are you <span id="confirmName"></span>?</h2>
+    <h2 id="confirmTitle">Are you <span id="confirmName"></span>?<span class="role" id="confirmRole"></span></h2>
     <p>Only you should see what comes next.</p>
     <button class="btn btn-primary" id="confirmYes" type="button">Yes, it's me</button>
     <button class="btn btn-ghost" id="confirmNo" type="button">No, go back</button>
@@ -232,18 +236,21 @@
 <script>
 /* =====================================================================
    CONFIG — edit these. All three lists must be the same length.
+   Any entry may end in "(...)": it's shown as a smaller second line.
+   For PLAYERS use "Character (Real name)" — tiles show and sort by the
+   real name so people can find themselves.
    ===================================================================== */
 const PLAYERS = [
-  "Howard",
-  "Charlotte",
-  "Ed",
-  "Martha",
-  "Emma",
-  "Ella",
-  "Lois",
-  "Owen",
-  "Meirian",
-  "Ross",
+  "The Tailor (Howard)",
+  "The Marine (Charlotte)",
+  "The Apprentice (Ed)",
+  "The Shepherdess (Martha)",
+  "The TV Warlord (Emma)",
+  "The Naturist (Ella)",
+  "The Couples Therapist (Lois)",
+  "The Journaler (Owen)",
+  "The Puppet Master (Meirian)",
+  "The Astrologer (Ross)",
 ];
 const PLACES = [
   "The Dining Room",
@@ -375,7 +382,8 @@ let hasRevealed = false;
 function renderTiles() {
   const list = $("tiles");
   list.innerHTML = "";
-  const names = PLAYERS.slice().sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }));
+  const names = PLAYERS.slice().sort((a, b) =>
+    realName(a).localeCompare(realName(b), undefined, { sensitivity: "base", numeric: true }));
   for (const name of names) {
     const li = document.createElement("li");
     const btn = document.createElement("button");
@@ -385,14 +393,20 @@ function renderTiles() {
     btn.disabled = done;
     const label = document.createElement("span");
     label.className = "name";
-    label.textContent = name;
+    label.textContent = realName(name);
+    if (character(name)) {
+      const role = document.createElement("span");
+      role.className = "role";
+      role.textContent = character(name);
+      label.appendChild(role);
+    }
     btn.appendChild(label);
     if (done) {
       const mark = document.createElement("span");
       mark.className = "mark";
       mark.textContent = "briefed ✓";
       btn.appendChild(mark);
-      btn.setAttribute("aria-label", name + ", already briefed");
+      btn.setAttribute("aria-label", realName(name) + ", already briefed");
     }
     btn.addEventListener("click", () => openConfirm(name));
     li.appendChild(btn);
@@ -407,7 +421,8 @@ function closeOverlay(id) { $(id).classList.remove("open"); }
 function openConfirm(name) {
   if (briefed.has(name)) return;
   current = name;
-  $("confirmName").textContent = name;
+  $("confirmName").textContent = realName(name);
+  $("confirmRole").textContent = character(name);
   openOverlay("confirmOverlay");
   $("confirmYes").focus();
 }
@@ -415,7 +430,7 @@ function openConfirm(name) {
 function openReveal() {
   closeOverlay("confirmOverlay");
   const c = contracts[current];
-  $("revealName").textContent = current;
+  $("revealName").textContent = character(current) || realName(current);
   // Filled now but hidden by CSS until the card is held.
   setValue("vVictim", c.victim);
   setValue("vPlace", c.place);
@@ -427,17 +442,25 @@ function openReveal() {
   openOverlay("revealOverlay");
 }
 
-// "The Pan of Pain (frying pan)" -> title, with the bracketed part as a smaller line.
+// "The Pan of Pain (frying pan)" -> { main: "The Pan of Pain", sub: "frying pan" }.
+function splitLabel(text) {
+  const m = /^(.*\S)\s*\(([^()]*)\)\s*$/.exec(text);
+  return m ? { main: m[1], sub: m[2] } : { main: text, sub: "" };
+}
+// Players are "Character (Real name)".
+function realName(player) { const p = splitLabel(player); return p.sub || p.main; }
+function character(player) { const p = splitLabel(player); return p.sub ? p.main : ""; }
+
+// Main text, with the bracketed part as a smaller line.
 function setValue(id, text) {
   const el = $(id);
-  el.textContent = "";
-  const m = /^(.*\S)\s*\(([^()]*)\)\s*$/.exec(text);
-  el.appendChild(document.createTextNode(m ? m[1] : text));
-  if (m) {
-    const sub = document.createElement("span");
-    sub.className = "sub";
-    sub.textContent = m[2];
-    el.appendChild(sub);
+  const { main, sub } = splitLabel(text);
+  el.textContent = main;
+  if (sub) {
+    const span = document.createElement("span");
+    span.className = "sub";
+    span.textContent = sub;
+    el.appendChild(span);
   }
 }
 
