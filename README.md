@@ -1,4 +1,4 @@
-# The Contracts
+# Murder Mystery Live
 
 A single-file, offline web app for a live "assassin" party game. Ten players
 take turns on one shared phone: each taps their name, confirms it's them, and
@@ -35,7 +35,7 @@ that's how you re-show someone who forgot theirs.
    ```sh
    git init
    git add index.html README.md
-   git commit -m "The Contracts"
+   git commit -m "Murder Mystery Live"
    git branch -M main
    git remote add origin https://github.com/<you>/<repo>.git
    git push -u origin main
